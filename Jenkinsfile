@@ -1,20 +1,30 @@
 pipeline {
-  agent any
-  stages {
-    stage('Build Docker Image') {
-      steps {
-        script {
-          dockerImage = docker.build("your-dockerhub-username/hello-world:latest")
-        }
-      }
+    agent any
+
+    environment {
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials') // Add Docker Hub credentials in Jenkins
     }
-    stage('Push to Docker Hub') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PWD')]) {
-          sh "docker login -u $DOCKER_USER -p $DOCKER_PWD"
-          dockerImage.push()
+
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image
+                    dockerImage = docker.build("your-dockerhub-username/hello-world:${env.BUILD_ID}")
+                }
+            }
         }
-      }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Log in to Docker Hub
+                    docker.withRegistry('https://registry.hub.docker.com', 'DOCKER_HUB_CREDENTIALS') {
+                        // Push the Docker image
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
     }
-  }
 }
